@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Cota ME/EPP</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- html2pdf.js CDN para Exportação em PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 md:p-8">
+
+  <div class="max-w-6xl mx-auto space-y-6" id="conteudo-principal">
+    
+    <!-- Cabeçalho -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between border-b border-slate-200 pb-4 gap-4">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">Calculadora de Cota ME/EPP</h1>
+        <p class="text-sm text-slate-500 mt-1">Cálculo de reserva de cota com base no limite financeiro e percentual máximo aplicável</p>
+      </div>
+      <div>
+        <button id="btn-exportar" onclick="exportarPDF()" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-all duration-200 text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a12 12 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Exportar Relatório em PDF
+        </button>
+      </div>
+    </div>
+
+    <!-- Painel de Parâmetros e Resumo -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Parâmetros de Cálculo -->
+      <div class="lg:col-span-5 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <h2 class="text-lg font-semibold text-slate-900 border-b pb-2">PARÂMETROS DE CÁLCULO</h2>
+        
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Limite Financeiro da Cota (R$)</label>
+          <input type="number" id="input-limite-financeiro" value="80000" step="0.01" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 uppercase mb-1">Percentual Máximo (%)</label>
+          <input type="number" id="input-percentual-maximo" value="25" step="0.01" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium">
+        </div>
+      </div>
+
+      <!-- Resumo do Cálculo (4 Casas Decimais) -->
+      <div class="lg:col-span-7 bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+        <h2 class="text-lg font-semibold text-slate-900 border-b pb-2">RESUMO DO CÁLCULO</h2>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+            <span class="block text-xs font-semibold text-slate-500 uppercase">Valor Total Contratação</span>
+            <span id="resumo-valor-total" class="block text-xl font-bold text-blue-900 mt-1">R$ 0,0000</span>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+            <span class="block text-xs font-semibold text-slate-500 uppercase">% Aplicado à Cota</span>
+            <span id="resumo-percentual-aplicado" class="block text-xl font-bold text-blue-900 mt-1">0,0000%</span>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+            <span class="block text-xs font-semibold text-slate-500 uppercase">Qtd Total da Cota</span>
+            <span id="resumo-qtd-cota" class="block text-xl font-bold text-blue-900 mt-1">0</span>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+            <span class="block text-xs font-semibold text-slate-500 uppercase">Valor Total da Cota</span>
+            <span id="resumo-valor-cota" class="block text-xl font-bold text-blue-900 mt-1">R$ 0,0000</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela Detalhada -->
+    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+      <div class="flex items-center justify-between border-b pb-2">
+        <h2 class="text-lg font-semibold text-slate-900">DETALHAMENTO POR ÓRGÃO / UNIDADE</h2>
+        <button onclick="adicionarLinha()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors inline-flex items-center gap-1">
+          + Adicionar Órgão
+        </button>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-100 text-slate-600 uppercase border-b border-slate-200">
+              <th class="p-3">Órgão/Unidade</th>
+              <th class="p-3">Quantidade</th>
+              <th class="p-3">Valor Unitário (R$)</th>
+              <th class="p-3">Valor Total</th>
+              <th class="p-3">% Aplicado</th>
+              <th class="p-3">Cota ME/EPP</th>
+              <th class="p-3">Valor da Cota</th>
+              <th class="p-3">Tratamento</th>
+              <th class="p-3 text-center" id="coluna-acao">Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-corpo" class="divide-y divide-slate-200">
+            <!-- As linhas serão inseridas via JavaScript -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- Nota Explicativa -->
+      <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 text-[11px] text-slate-500 space-y-1 mt-4">
+        <p><strong>* Observação Metodológica:</strong> Os valores financeiros e percentuais são exibidos com até <strong>4 casas decimais</strong> para total precisão matemática em valores fracionados. As quantidades físicas de cota reservada utilizam a regra de arredondamento estritamente para baixo (<code>Math.floor</code>), assegurando que o valor limite de R$ 80.000,00 nunca seja ultrapassado.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // Formatação de moeda com 4 casas decimais
+    function formatarMoeda(valor) {
+      return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 2, maximumFractionDigits: 4 });
+    }
+
+    // Formatação de percentual com 4 casas decimais
+    function formatarPercentual(valor) {
+      return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + '%';
+    }
+
+    // Formatação de número inteiro
+    function formatarNumero(valor) {
+      return valor.toLocaleString('pt-BR');
+    }
+
+    // Dados iniciais
+    let listaOrgaos = [
+      { nome: 'INCA', quantidade: 361660, valorUnitario: 0.3211 },
+      { nome: 'HFL', quantidade: 0, valorUnitario: 0 }
+    ];
+
+    function renderizarTabela() {
+      const corpo = document.getElementById('tabela-corpo');
+      corpo.innerHTML = '';
+
+      const limiteFinanceiro = parseFloat(document.getElementById('input-limite-financeiro').value) || 0;
+      const percentualMaximo = parseFloat(document.getElementById('input-percentual-maximo').value) || 0;
+
+      // Cálculo do valor total global da contratação
+      let valorTotalContratacao = 0;
+      listaOrgaos.forEach(item => {
+        valorTotalContratacao += item.quantidade * item.valorUnitario;
+      });
+
+      // Cálculo do % Aplicado à Cota (Sem ultrapassar o % máximo e o valor limite)
+      let percentualAplicado = 0;
+      if (valorTotalContratacao > 0) {
+        let percentualLimiteCalculado = (limiteFinanceiro / valorTotalContratacao) * 100;
+        percentualAplicado = Math.min(percentualMaximo, percentualLimiteCalculado);
+      }
+
+      let totalQtdCota = 0;
+      let totalValorCota = 0;
+
+      listaOrgaos.forEach((item, index) => {
+        const valorTotalItem = item.quantidade * item.valorUnitario;
+        
+        // Cota com arredondamento estrito para baixo (Math.floor)
+        const cotaMEEPP = Math.floor(item.quantidade * (percentualAplicado / 100));
+        const valorCotaItem = cotaMEEPP * item.valorUnitario;
+
+        totalQtdCota += cotaMEEPP;
+        totalValorCota += valorCotaItem;
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors';
+
+        tr.innerHTML = `
+          <td class="p-2">
+            <input type="text" value="${item.nome}" onchange="atualizarCampo(${index}, 'nome', this.value)" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          </td>
+          <td class="p-2">
+            <input type="number" value="${item.quantidade}" onchange="atualizarCampo(${index}, 'quantidade', parseFloat(this.value) || 0)" class="w-28 border border-slate-300 rounded px-2 py-1 text-xs">
+          </td>
+          <td class="p-2">
+            <input type="number" value="${item.valorUnitario}" step="0.0001" onchange="atualizarCampo(${index}, 'valorUnitario', parseFloat(this.value) || 0)" class="w-28 border border-slate-300 rounded px-2 py-1 text-xs">
+          </td>
+          <td class="p-3 font-medium text-slate-700">${formatarMoeda(valorTotalItem)}</td>
+          <td class="p-3 text-slate-600">${formatarPercentual(percentualAplicado)}</td>
+          <td class="p-3 font-semibold text-slate-800">${formatarNumero(cotaMEEPP)}</td>
+          <td class="p-3 font-semibold text-slate-900">${formatarMoeda(valorCotaItem)}</td>
+          <td class="p-3">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${cotaMEEPP > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}">
+              ${cotaMEEPP > 0 ? 'COTA' : 'SEM COTA'}
+            </span>
+          </td>
+          <td class="p-2 text-center btn-acao-col">
+            <button onclick="removerLinha(${index})" class="text-white bg-red-500 hover:bg-red-600 font-bold w-6 h-6 rounded-full inline-flex items-center justify-center text-xs">
+              ✕
+            </button>
+          </td>
+        `;
+
+        corpo.appendChild(tr);
+      });
+
+      // Atualiza os painéis superiores com 4 casas decimais
+      document.getElementById('resumo-valor-total').innerText = formatarMoeda(valorTotalContratacao);
+      document.getElementById('resumo-percentual-aplicado').innerText = formatarPercentual(percentualAplicado);
+      document.getElementById('resumo-qtd-cota').innerText = formatarNumero(totalQtdCota);
+      document.getElementById('resumo-valor-cota').innerText = formatarMoeda(totalValorCota);
+    }
+
+    function atualizarCampo(index, campo, valor) {
+      listaOrgaos[index][campo] = valor;
+      renderizarTabela();
+    }
+
+    function adicionarLinha() {
+      listaOrgaos.push({ nome: 'NOVO ÓRGÃO', quantidade: 0, valorUnitario: 0 });
+      renderizarTabela();
+    }
+
+    function removerLinha(index) {
+      if (listaOrgaos.length > 1) {
+        listaOrgaos.splice(index, 1);
+        renderizarTabela();
+      }
+    }
+
+    // Ouvintes nos parâmetros gerais
+    document.getElementById('input-limite-financeiro').addEventListener('input', renderizarTabela);
+    document.getElementById('input-percentual-maximo').addEventListener('input', renderizarTabela);
+
+    // Inicialização
+    renderizarTabela();
+
+    // Função para exportar PDF limpo
+    function exportarPDF() {
+      const elemento = document.getElementById('conteudo-principal');
+      const btnExportar = document.getElementById('btn-exportar');
+      const acoesCol = document.querySelectorAll('.btn-acao-col');
+      const headerAcao = document.getElementById('coluna-acao');
+
+      // Oculta botões para o PDF
+      btnExportar.style.display = 'none';
+      if (headerAcao) headerAcao.style.display = 'none';
+      acoesCol.forEach(el => el.style.display = 'none');
+
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     'Calculo-Cota-ME-EPP.pdf',
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+      };
+
+      html2pdf().set(opt).from(elemento).save().then(() => {
+        // Restaura a exibição dos botões
+        btnExportar.style.display = 'inline-flex';
+        if (headerAcao) headerAcao.style.display = '';
+        acoesCol.forEach(el => el.style.display = '');
+      });
+    }
+  </script>
+</body>
+</html>
